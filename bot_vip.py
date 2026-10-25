@@ -1,4 +1,4 @@
-# Bot VIP standalone: save as bot_vip.py and run: python bot_vip.py bot
+# Jalankan dengan: python bot_vip.py bot
 import hashlib
 import hmac
 import sqlite3
@@ -194,10 +194,10 @@ class Plan:
     amount: int
 
 PLANS = {
-    'indo_premium': Plan('INDO PREMIUM', 30000),
-    'gay_lesby_acak': Plan('GAY/LESBY ACAK', 50000),
     'chil_vip': Plan('CHIL VIP', 75000),
-    'full_paket': Plan('FULL PAKET', 95000),
+    'gay_lesby_acak': Plan('GAY LESBY', 50000),
+    'indo_premium': Plan('INDO PREMIUM', 30000),
+    'full_paket': Plan('PAKET LENGKAP', 95000),
 }
 
 def create_plan_order(store, user_id, plan_id, group_ids):
@@ -295,12 +295,51 @@ class VipBot:
 
     async def start(self, update, context):
         message = update.effective_message
+
         if update.effective_chat.type != 'private':
-            await message.reply_text('Buka chat pribadi dengan bot untuk memilih paket VIP.')
+            await message.reply_text(
+                'Buka chat pribadi dengan bot untuk memilih paket VIP.'
+            )
             return
-        buttons = [[InlineKeyboardButton(f'{plan.name} — Rp{plan.amount:,}'.replace(',', '.'), callback_data=f'vip:buy:{plan_id}')] for plan_id, plan in PLANS.items()]
-        prefix = 'MODE UJI COBA — jangan kirim uang sungguhan.\n\n' if self.environment == 'sandbox' else ''
-        await message.reply_text(prefix + 'Pilih grup VIP. Semua paket permanen, cukup bayar sekali.\nGunakan /akses untuk mengambil akses yang sudah dibayar.', reply_markup=InlineKeyboardMarkup(buttons))
+
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    f'{plan.name} — Rp{plan.amount:,}'.replace(',', '.'),
+                    callback_data=f'vip:buy:{plan_id}',
+                )
+            ]
+            for plan_id, plan in PLANS.items()
+        ]
+
+        packages = '\n'.join(
+            f'{index}. {plan.name} — Rp{plan.amount:,}'.replace(',', '.')
+            for index, plan in enumerate(PLANS.values(), start=1)
+        )
+
+        prefix = (
+            'MODE UJI COBA — jangan kirim uang sungguhan.\n\n'
+            if self.environment == 'sandbox'
+            else ''
+        )
+
+        text = (
+            prefix
+            + 'Selamat datang di layanan VIP TOKO GEN Z.\n\n'
+            + 'PILIHAN PAKET VIP\n'
+            + packages
+            + '\n\n'
+            + 'Akses permanen • Satu kali pembayaran\n'
+            + 'Setiap paket berlaku untuk satu grup yang dipilih.\n'
+            + 'Undangan grup dikirim setelah pembayaran terverifikasi.\n\n'
+            + 'Silakan pilih paket melalui tombol di bawah.\n'
+            + 'Untuk mengambil kembali akses yang telah dibayar, gunakan /akses.'
+        )
+
+        await message.reply_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
 
     async def group_id(self, update, context):
         await update.effective_message.reply_text(f'ID chat: {update.effective_chat.id}')
