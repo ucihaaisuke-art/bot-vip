@@ -93,4 +93,5 @@ class Store:
                     raise PaymentError('ID transaksi sudah digunakan pesanan lain.') from None
                 self.connection.execute('INSERT OR IGNORE INTO access (user_id, group_id, order_id) VALUES (?, ?, ?)', (order['user_id'], order['group_id'], order_id))
             else:
-                self.connection.execute('UPDATE orders SET state = ? WHERE order_id = ?', (state, order_id))
+                self.connection.execute('UPDATE orders SET state = ? WHERE order_id = ?', (state, order_id))if __name__ == '__main__':
+    main()
