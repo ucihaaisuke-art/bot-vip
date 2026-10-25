@@ -1,0 +1,7 @@
+[build]
+buildCommand = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "python bot_vip.py bot"
+healthcheckPath = "/health"
+numReplicas = 1
