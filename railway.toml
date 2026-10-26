@@ -2,6 +2,6 @@
 buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "python bot_vip.py bot"
+startCommand = "python migrate_indo.py && python bot_vip.py bot"
 healthcheckPath = "/health"
 numReplicas = 1
