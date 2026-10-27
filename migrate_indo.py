@@ -5,28 +5,46 @@ from pathlib import Path
 
 
 def main():
-    old_id = -5160399926
-    new_id = -1004434516169
+    migrations = {
+        -5160399926: -1004434516169,
+        -5495735553: -1004328410781,
+    }
+
     path = Path(os.environ["VIP_DB_PATH"])
 
     if not path.is_file():
-        raise SystemExit("Database VIP tidak ditemukan; migrasi dibatalkan.")
+        raise SystemExit(
+            "Database VIP tidak ditemukan; migrasi dibatalkan."
+        )
 
     db = sqlite3.connect(path)
-    try:
-        old_orders = db.execute(
-            "SELECT COUNT(*) FROM orders WHERE group_id = ?", (old_id,)
-        ).fetchone()[0]
-        old_access = db.execute(
-            "SELECT COUNT(*) FROM access WHERE group_id = ?", (old_id,)
-        ).fetchone()[0]
 
-        if not old_orders and not old_access:
-            print("Migrasi INDO PREMIUM sudah selesai atau tidak diperlukan.", flush=True)
+    try:
+        needs_migration = any(
+            db.execute(
+                "SELECT 1 FROM orders WHERE group_id = ? "
+                "UNION SELECT 1 FROM access "
+                "WHERE group_id = ? LIMIT 1",
+                (old_id, old_id),
+            ).fetchone() is not None
+            for old_id in migrations
+        )
+
+        if not needs_migration:
+            print(
+                "Migrasi ID grup sudah selesai atau tidak diperlukan.",
+                flush=True,
+            )
             return
 
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-        backup = path.with_name(path.name + ".before-indo-" + stamp + ".bak")
+        stamp = datetime.now(timezone.utc).strftime(
+            "%Y%m%dT%H%M%S%fZ"
+        )
+
+        backup = path.with_name(
+            path.name + ".before-group-migration-" + stamp + ".bak"
+        )
+
         backup_db = sqlite3.connect(backup)
         try:
             db.backup(backup_db)
@@ -35,18 +53,33 @@ def main():
 
         with db:
             db.execute("BEGIN IMMEDIATE")
-            db.execute(
-                "UPDATE orders SET group_id = ? WHERE group_id = ?",
-                (new_id, old_id),
-            )
-            db.execute(
-                "INSERT OR IGNORE INTO access (user_id, group_id, order_id) "
-                "SELECT user_id, ?, order_id FROM access WHERE group_id = ?",
-                (new_id, old_id),
-            )
-            db.execute("DELETE FROM access WHERE group_id = ?", (old_id,))
 
-        print("Migrasi INDO PREMIUM selesai. Status pembayaran tetap tersimpan.", flush=True)
+            for old_id, new_id in migrations.items():
+                db.execute(
+                    "UPDATE orders SET group_id = ? "
+                    "WHERE group_id = ?",
+                    (new_id, old_id),
+                )
+
+                db.execute(
+                    "INSERT OR IGNORE INTO access "
+                    "(user_id, group_id, order_id) "
+                    "SELECT user_id, ?, order_id FROM access "
+                    "WHERE group_id = ?",
+                    (new_id, old_id),
+                )
+
+                db.execute(
+                    "DELETE FROM access WHERE group_id = ?",
+                    (old_id,),
+                )
+
+        print(
+            "Migrasi ID grup selesai. "
+            "Status pembayaran tetap tersimpan.",
+            flush=True,
+        )
+
     finally:
         db.close()
 
